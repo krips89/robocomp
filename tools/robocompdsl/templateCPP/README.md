@@ -71,6 +71,8 @@ After editing the new config file we can run the component:
 
     bin/
 
+
+
 ```cog
 A()
 cog.out(component['name'] + ' ')
