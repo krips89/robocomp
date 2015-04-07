@@ -20,7 +20,7 @@ from parseCDSL import *
 component = CDSLParsing.fromFile(theCDSL)
 
 ```
-```end```
+
 #
 ```cog
 
@@ -28,7 +28,6 @@ A()
 cog.out(' ' + component['name'])
 
 ```
-```end```
 
 Intro to component here
 
@@ -42,7 +41,7 @@ cog.out(' *' + component['name'] + '* ')
 Z()
 
 ```
-```end```
+
 needs a configuration file to start. In
 
     etc/config
@@ -77,7 +76,6 @@ cog.out(component['name'] + ' ')
 Z()
 
 ```
-```end```
     --Ice.Config=config
 
 
