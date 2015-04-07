@@ -22,6 +22,7 @@ component = CDSLParsing.fromFile(theCDSL)
 ```
 
 #
+
 ```cog
 
 A()
