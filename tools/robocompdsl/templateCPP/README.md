@@ -70,12 +70,11 @@ Z()
 After editing the new config file we can run the component:
 
     bin/
-```cog
 
+```cog
 A()
 cog.out(component['name'] + ' ')
 Z()
-
 ```
     --Ice.Config=config
 
