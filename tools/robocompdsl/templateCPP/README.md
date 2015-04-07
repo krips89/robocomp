@@ -66,13 +66,13 @@ Z()
 ```end```
 
     cp etc/config config
+
+```end```
     
 After editing the new config file we can run the component:
 
     bin/
-
-
-
+```end```
 ```cog
 A()
 cog.out(component['name'] + ' ')
