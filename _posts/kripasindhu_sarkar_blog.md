@@ -1,82 +1,50 @@
 ---
 layout: post
-title: GSoC, Symbolic planning techniques for recognizing objects domestic - Part 2 
+title: GSoc-Idea: Computer vision components and libraries management
 categories: [GSoC15]
-tags: kripasindhu_sarkar
-description: In this second post, although it may seem begin the house from the roof, let's talk about how a robot moves its arms and hands in order to manipulate daily objects. The ultimate goal of this work is make the robot to be able to recognize certain daily objects in a house (for example a mug), and to manipulate...
+tags: [kripasindhu_sarkar]
+description: This blog introduces the author, describes the project idea and discusses the approachs taken to work towards the project idea
 ---
-#GSoC: Symbolic planning techniques for recognizing objects domestic
+#GSoC: Computer vision components and libraries management
 
-##A little introduction about inverse kinematics
+##About me
 
-In this second post, although it may seem begin the house from the roof, let's talk about how a robot moves its arms and hands in order to manipulate daily objects.
+Hello, I am Kripasindhu Sarkar, a new PhD student at German Research Center for Artificial Intelligence (DFKI), Kaiserslautern working in the topic of Object Detection in simple and depth images. 
+I am extremely interested in the topic of object detection and computer vision; specificaly by using theories from human cognition and perception to simulate human way of visualizing the problem. 
+But for now, I am focused on getting a very good grasp at the exsisting engineering (mostly) techniques in the field of computer vision and object detection. 
+Before joining here as a PhD student I worked as a Software Engineering at Paypal for 2 years and, prior to that I did my masters and graduation from Indian Institute of Technology Kharagpur (IIT Kharagpur).
 
-The ultimate goal of this work is make the robot to be able to recognize certain daily objects in a house (for example a mug), and to manipulate these objects with its effectors (hands). To do this, one of the things we need to implement is the inverse kinematics of the robot. Although this is the last step, we start by inverse kinematics to be easier and more intuitive than object recognition (besides that we have almost finalized the cinematic component in Robocomp).
 
-###What does the inverse kinematics?
+###Computer vision components and libraries management
 
-A recurring problem in robotics is to give to robots a certain autonomy in terms of movement. Focusing on a practical and realistic example, as is the trajectory of a robotic arm from an initial position to a target point, the question is how does the robot move its arm from the starting pose to the final pose? or what values take its engines arm to reach the final position? This is the typical problem of inverse kinematics, which is responsible for calculating the angular values of a kinematic chain composed engines (joints) of the arm to reach a target position.
+The project is about designing and implementing a system for object detection and recognition in 3D point clouds and 2D images, and come up with a structured library with a good and easy-to-use APIs.
+There has been a good amount of research in this direction and my work was to cherrypick important ideas and present them as usable components. I'll now explain in details the various methods I chose to
+use as a part of this project.
 
-###Inverse kinematics in Robocomp
+##Local feature based on 2D images: 
+The idea is the find local features (like SIFT/SURF/ORB etc) in images of the object to be detected and the given test image. If enough matches are found between the descriptors of the to images an object is defined to be found. Important assumption is that the object to be detected must have textures. Advantage is that we get the complete 6 DOF of the object which might be useful for grasping. This comes in several flavors. 
+1. Planner objects: If we know the object is planner, we can directly compute its tomography (pose) after the match.
+2. Random objects: If the object is of arbitrary shape it is quite difficult to detect an object with its pose but can be done in a tricky offline phase [1]. A 3D reconstruction is performed through bundle adjustments with the object to be detected to find the 2D - 3D correspondences. On the run time, given an input image, If enough matches are found, the object is detected with its full pose by solving PnP problem. 
 
-As a result of the TFG, "Inverse kinematics in Social Robots" [1], since 2014 Robocomp has a component [2] that is responsible for calculating the inverse kinematics of the social robot Ursus [3], developed by Robolab. This component has undergone a big evolution, since it was created last year to now, and is more than likely to continue evolving to achieve inverse kinematics each finer and in less time. 
+##Dense feature based on 2D images:
+The idea is the find features over a grid or a region of an image encoding the properties of that region and use that feature in some classification algorithm to perform detection. Naturally, we need to calculate dense feature over all possible region size over the image and apply the classifier; and thus it is bit slow as well. Also object pose is not identified in this type. Few of them are:
+3. HOG based simple classification (well known).
+Difficulty in implementation: Moderate; HOG implementation with multiscale detector is present in OpenCV; but the training has to be performed separately using 3rd party tool like libsvm/matlab etc (but is straightfwd).
+4. HOG based Part Based Model: This is the famous and legendary and state of art (not anymore) object detector which uses LSVM.
+Difficulty in implementation: Difficult; OpenCV has the detection code, but not that good. Training LSVM is not straight fwd and we need to use the original Matlab implementation of the authors. 
+5. Wevlet based face detector with adaboost: This is also welknown face detector algorithm used widely.
+Difficulty in implementation: Easy; though the concept is not that straight fwd, it is readily avilable in OpenCV.
 
-Originally, this component receives three types of targets:
+##Detection/Recognition on Depth Images
+If we can get the Point Cloud with some laser scan or Kinect, there are plenty of algorithms to detect object with its pose. Again we have local feature based and global feature based algorithms described below:
+6. Direct object with local and global features [4]:
+Very similar to that of RGB image based algorithm with difference in the types of features. Local features have the advantage that preprocessing steps like segmentation is not required but tends to be slow. On the other hand we need to do segmentation to apply global features in the clusters. But once the segmentation (like identifying planes, etc and different clusters) of the scene is done, we can use the results subsequently. 
+Difficulty in implementation: Easy; components of pipeline is available in PCL.
+7. Object matching using classifiers: 
+Global features readily available in PCL and found it to have similar results to a current benchmark but faster (10 seconds for classification testing in the benchmark [2] which uses sliding window based classification on all scales using HOG like descriptors). 
+Difficulty in implementation: Moderate; It can be easy, but I have not executed something on the similar line in PCL; would try love to though. 
+There might be other recent depth based object detection which I don't have much knowledge (and not available in PCL). Some very recent image only algorithms are available, which I will not recommend (a single implementation will take 2 - 3 months/or I have less knowledge about them).
 
-1. POSE6D: It is the typical target with with translations and rotations in the X, Y and Z axis. The end effector has to be positioned at coordinates (tx, ty, tz) of the target and align their rotation axes with the target, specified in (rx, ry, rz).
-2. ADVANCEAXIS: its goal is to move the end effector of the robot along a vector. This is useful for improving the outcome of the above problem, for example, imagine that the hand has been a bit away from a mug. With this feature we can calculate the error vector between the end effector and the mug, and move the effector along the space to place it in an optimal position, near the mug.
-3. ALIGNAXIS: Its goal is that the end effector is pointing to target without moving to it but rotated as the target. It may be useful in certain cases where we are more interested in oriented the end effector with the same rotation of the target.
-
-To solve these various inverse kinematic problems, the component uses as main base the Levenberg-Marquardt algorithm proposed in the article "SBA: A Software Package for Generic Sparse Bundle Adjustment" by Lourakis and Argyros:
-
-    Input: A vector functon f: R^m → R^n with n≥m, a measurement vector x ∈ R^n and an initial parameters estimate p_0 ∈ R^m.
-    Output: A vector p+ ∈ R^m minimizing ||x-f(p)||^2.
-    Algorithm:
-        k:=0;                 v:=2;                     p:=p0;
-        A:=transposed(J)·J;   error:=x-f(p);            g:=transposed(J)·error;
-        stop:=(||g||∞ ≤ ε1);  μ:=t*max_i=1,...,m (Aii)
-        
-        while(!stop) and (k<k_max)
-             k:=k+1;
-             repeat
-                   SOLVE (A+μ·I)·δ_p=g;
-                   if(||δ_p||≤ ε2·(||p||+ε2))
-                        stop:=true;
-                   else
-                        p_new:=p+δ_p
-                        ρ:=(||error||^2-||x-f(p_new)||^2)/(transposed(δ_p)·(μ·δ_p+g));
-                        if ρ>0
-                            stop:=(||error||-||x-f(p_new)||<ε4·||error||);
-                            p:=p_new;
-                            A:=transposed(J)·J;    error:=x-f(p);    g:=transposed(J)·error;
-                            stop:=(stop) or (||g||∞ ≤ ε1);
-                            μ:=μ*max(1/3, 1-(2·ρ-1)^3);
-                            v:=2;
-                        else
-                            μ:=μ*v;
-                            v:=2*v;
-                        endif
-                   endif
-             until(ρ>0) or (stop)
-             stop:=(||error||≤ ε3);
-        endwhile
-        p+:=p;
-        
-Where `A` is the hessian matrix, `J` is the jacobian matrix, `g` is the gradient descent, `δ_p` is the increments, `ρ` is the ratio of profit that tells us if we are approaching a minimum or not, `μ` is the damping factor, and `t` and `ε1, ε2, ε3, ε4` are different thresholds. But the IK component of Robocomp adds several concepts to the original L-M algorithm, in order to complete the proper operation of the component: 
-
-1. Weight matrix: that controls the relevance between the translations (in meters) and rotations (in radians) of the target. So, where `g` was calculated as `transposed(J)·error`, now `g` is `transposed(J)·(W·error)`
-2. Motors lock: when a motor reachs its minimun or maximun limit, we modified the jacobian matrix.
-
-The new version of the inverse kinematics component simplifies the code of the old version and adds some more functionality:
-
-1. Executes more than once a target. The inverse kinematic result is not the same if the start point of the effector is the robot's home or a point B near tho the goal point.
-2. Executes the traslations without the motors of the wrisht (only for Ursus). This makes possible to move the arm with stiff wrist, and then we can rotate easely the wrist when the end effectos is near the target.
-
-Another improvement being studied is to include a small planner responsible for planning the trajectories of the robot arm, in order to facilitate the work of the IK component and reduce its execution time. However, one of the problems that the inverse kinematics can not solve by itself is the problem of gaps and imperfections of the robot. These gaps and inaccuracies make the robot move its arm toward the target position improperly, so that the robot "thinks" that the end effector has reached the target but in reality has fallen far short of the target pose.
-
-In order to solve this last problem, we need visual feedback to correct the errors and mistakes introduced for the gaps and inaccuracies in the kinematic chain. The visualBIK component, developed during this project, is responsible for solve this visual feedback and correct the inverse kinematic, but we'll talk about it in the next post. 
-
-Bye!
 
 ----------
 [1] Master Thesis, Universidad de Extremadura, Escuela Politécnica de Cáceres. Mercedes Paoletti Ávila. 'Cinemática Inversa en Robots Sociales'. Directed by Pablo Bustos and Luis Vicente Calderita. July 2014. Download in https://robolab.unex.es/index.php?option=com_remository&Itemid=53&func=startdown&id=143
